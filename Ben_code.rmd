@@ -1,0 +1,35 @@
+````{r}
+
+library(tidyverse)
+
+```
+
+```{r}
+
+subs <- read.csv("master_data_v2.csv")
+head(subs)
+
+```
+
+```{r}
+
+library(batman)
+
+subs$Language <- as.factor(subs$Language)
+##subs$Subscription.Type <- to_logical(subs$Subscription.Type, custom_true = c("Lifetime"), custom_false = c("Limited"))
+##subs$Subscription.Type <- as.logical(subs$Subscription.Type)
+##subs$Subscription.Event.Type <- to_logical(subs$Subscription.Event.Type, custom_true = c("INITIAL_PURCHASE"), custom_false = c("RENEWAL"))
+##subs$Purchase.Store <- to_logical(subs$Purchase.Store, custom_true = c("App"), custom_false = c("Web"))
+subs$Currency <- as.factor(subs$Currency)
+##subs$Demo.User <- to_logical(subs$Demo.User, custom_true = c("Yes"), custom_false = c("No"))
+##subs$Free.Trial.User <- to_logical(subs$Free.Trial.User, custom_true = c("Yes"), custom_false = c("No"))
+##subs$Auto.Renew <- to_logical(subs$Auto.Renew, custom_true = c("On"), custom_false = c("Off"))
+subs$Country <- as.factor(subs$Country)
+##subs$User.Type <- to_logical(subs$User.Type, custom_true = c("Consumer"), custom_false = c("Other"))
+##might change Lead Platform to logical once 'Other' becomes 'NA'
+##subs$Email.Subscriber <- to_logical(subs$Email.Subscriber, custom_true = c("Yes"), custom_false = c("No"))
+##subs$Push.Notifications <- to_logical(subs$Push.Notifications, custom_true = c("Yes"), custom_false = c("No"))
+
+head(subs)
+
+```
