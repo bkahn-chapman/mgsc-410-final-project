@@ -65,7 +65,8 @@ library('NbClust')
 
 # More libraries 
 ```{r}
-library(hclust)
+# library(hclust)
+library("dendextend")
 
 ```
 
@@ -90,7 +91,7 @@ master_data <- master_data %>% mutate(
   Demo.User = as.factor(Demo.User),
   Free.Trial.User = as.factor(Free.Trial.User),
   Auto.Renew = as.factor(Auto.Renew),
-  Country = as.factor(Country),
+  # Country = as.factor(Country),
   User.Type = as.factor(User.Type),
   Lead.Platform = as.factor(Lead.Platform),
   Email.Subscriber = as.factor(Email.Subscriber),
@@ -114,7 +115,8 @@ HA_clust_df <- master_data %>%
   mutate(
     Language = as.factor(Language),
     Subscription.Type = as.factor(Subscription.Type)
-  )
+  ) %>% 
+  select(-Language, -Subscription.Type)
 
 #omit NA's
 HA_clust_df <- na.omit(HA_clust_df)
@@ -133,12 +135,57 @@ plot(hcl, cex = 0.6, hang = -1)
 
 ```
 
+```{r}
+
+HA_clust2 <- master_data %>% 
+  select(Language, Purchase.Amount.in.USD, Subscription.Type, Send.Count, Open.Count, Click.Count, Unique.Open.Count, Unique.Click.Count) 
+  #  %>% 
+  # mutate(
+  #   Language = as.factor(Language),
+  #   Subscription.Type = as.factor(Subscription.Type)
+  # ) %>% 
+  # select(-Language, -Subscription.Type)
+
+#omit NA's
+HA_clust2 <- na.omit(HA_clust2)
+HA_clust2 <- scale(HA_clust2)
+
+```
 
 
+```{r}
+# Dissimilarity Matrix
+d2 <- dist(HA_clust2, method = "euclidean")
+# Hierarchical clustering using complete linkage
+hcl2 <- hclust(d2, method = "complete")
+#PLot dendrogram
+plot(hcl2, cex = 0.6, hang = -1)
 
+```
+```{r}
 
+ggplot(master_data, aes(
+                          # x = Language,
+                          x = Purchase.Amount.in.USD)) +
+  geom_histogram()
 
+```
 
+```{r}
+
+ggplot(master_data, aes(x = Language))+
+  facet_wrap("Country")+
+  geom_histogram(stat="count")
+
+```
+
+```{r}
+
+ggplot(master_data, aes(x = Subscription.Event.Type, y = Purchase.Amount.in.USD))+
+  facet_wrap("Country")+
+  geom_boxplot()
+
+```
 
 
 
