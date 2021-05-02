@@ -10,10 +10,6 @@ output:
 
 ```{r setup, include=FALSE}
 library(knitr)
-# As long as you are working in a Rstudio Project file, you shouldn't need to 'hard code' directories like this 
-# change to your own working directory
-# knitr::opts_knit$set(root.dir = 'C:/Users/hersh/Dropbox/Chapman/Teaching/MGSC_310/Fall_2019/problem_sets')
-# setwd('C:/Users/hersh/Dropbox/Chapman/Teaching/MGSC_310/Fall_2019/problem_sets')
 
 # set seed to your own favorite number
 set.seed(1818)
@@ -69,11 +65,10 @@ library('NbClust')
 
 # More libraries 
 ```{r}
-
+library(hclust)
 
 ```
 
-na.strings = c("foo", "bar")
 
 Loading datasets
 
@@ -102,73 +97,40 @@ master_data <- master_data %>% mutate(
   Push.Notifications = as.factor(Push.Notifications)
   ) %>% select(-Purchase.Amount)
 
-
 # change "unknown" in Lead platform to NA
+```
 
+#First attempt cluster unsupervised Hierarchical Agglomerative Clustering
+Variables: Language, Purchase Amount,Subscription Type, Send count, Open count, Click count, Unique open count, Unique click count
+
+https://www.datacamp.com/community/tutorials/hierarchical-clustering-R
+https://uc-r.github.io/hc_clustering
+
+HA cluttering code
+```{r}
+
+HA_clust_df <- master_data %>% 
+  select(Language, Purchase.Amount.in.USD, Subscription.Type, Send.Count, Open.Count, Click.Count, Unique.Open.Count, Unique.Click.Count) %>% 
+  mutate(
+    Language = as.factor(Language),
+    Subscription.Type = as.factor(Subscription.Type)
+  )
+
+#omit NA's
+HA_clust_df <- na.omit(HA_clust_df)
+HA_clust_df <- scale(HA_clust_df)
 
 ```
 
-#First attempt cluster unsupervised
-Understanding the subscriber segments present in the database
-Unsupervised 
-Cluster by country
-gaussian mixture model
 
 ```{r}
-# determine number of clusters using elbow method
-fviz_nbclust(master_data, 
-             kmeans, 
-             method = "wss") +
-  geom_vline(xintercept = 4, 
-             linetype = 2)+
-  labs(subtitle = "Elbow method")
+# Dissimilarity Matrix
+d <- dist(HA_clust_df, method = "euclidean")
+# Hierarchical clustering using complete linkage
+hcl <- hclust(d, method = "complete")
+#PLot dendrogram
+plot(hcl, cex = 0.6, hang = -1)
 
-
-# # determine number of clusters using Gap Statistic method
-# fviz_nbclust(Customers_DF, 
-#              kmeans, 
-#              nstart = 25,  
-#              method = "gap_stat", 
-#              nboot = 500) +
-#  labs(subtitle = 
-#         "Gap statistic method")
-# 
-# 
-# # install.packages('NbClust')
-# 
-# # determine number of clusters using Gap Statistic method
-# Nb_cl <- NbClust(Customers_DF, 
-#         diss = NULL, 
-#         distance = "euclidean",
-#         min.nc = 2, 
-#         max.nc = 15, 
-#         method = "kmeans")
-# 
-# Nb_cl$Best.nc[1,]
-```
-
-
-
-
-```{r}
-#---------------------------------------------------------------------------------
-# K-Means Clustering Using Optimal Number of Clusters Learned Above
-#---------------------------------------------------------------------------------
-# centers = 3 is number of clusters
-kmeans3 <- kmeans(Customers_DF, 
-                  centers = 3, 
-                  nstart = 25)
-
-kmeans3$centers
-
-#---------------------------------------------------------------------------------
-# Plot Clusters Using Clust Plot
-#---------------------------------------------------------------------------------
-clusplot(Customers_DF, 
-         kmeans3$cluster, 
-         color=TRUE, 
-         shade=FALSE,
-         labels=5, lines=2)
 ```
 
 
