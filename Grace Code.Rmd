@@ -11,12 +11,6 @@ output:
 ```{r setup, include=FALSE}
 library(knitr)
 
-# set seed to your own favorite number
-set.seed(1818)
-options(width=70)
-options(scipen=99)
-
-
 # general rchunk code options
 
 # this sets text to small
@@ -42,6 +36,8 @@ opts_chunk$set(message = FALSE,
 
 ```{r}
 rm(list = ls())
+set.seed(1818)
+options(scipen = 9)
 ```
 
 ```{r}
@@ -67,6 +63,8 @@ library('NbClust')
 ```{r}
 # library(hclust)
 library("dendextend")
+library("batman")
+
 
 ```
 
@@ -75,30 +73,37 @@ Loading datasets
 
 ```{r}
 app_activity <- read.csv(here::here("cleaned_data", "app_activity.csv"))
-master_data <- read.csv(here::here("cleaned_data", "master_data.csv"), na.strings = "NULL")
+raw_data <- read.csv(here::here("cleaned_data", "master_data_forR.csv"), na.strings = "NULL")
 ```
 
 Data Manipulation
 #changed Purchase.Amount.In.USD to a numeric in excel and replaced the $- to 0
 ```{r}
+
+master_data <- raw_data %>% select(-ï..ID,-Purchase.Amount,-Subscription.Event.Type,
+                                   -Subscription.Type,-Purchase.Store,-Subscription.Start.Date,
+                                   -Subscription.Expiration,-Demo.User,-Free.Trial.User,
+                                   -Free.Trial.Start.Date, -Free.Trial.Expiration,-Auto.Renew,
+                                   -User.Type,-Lead.Platform, -Email.Subscriber,-Push.Notifications)
+
 master_data <- master_data %>% mutate(
   Purchase.Amount.in.USD = as.numeric(Purchase.Amount.in.USD),
   Langauge = as.factor(Language),
-  Subscription.Type = as.factor(Subscription.Type),
-  Subscription.Event.Type = as.factor(Subscription.Event.Type),
-  Purchase.Store = as.factor(Purchase.Store),
+  isSubscriptionTypeLifetime = as.factor(isSubscriptionTypeLifetime),
+  isSubscriptionEventTypeRenewal = as.factor(isSubscriptionEventTypeRenewal),
+  isPurchaseStoreWeb = as.factor(isPurchaseStoreWeb),
   Currency = as.factor(Currency),
-  Demo.User = as.factor(Demo.User),
-  Free.Trial.User = as.factor(Free.Trial.User),
-  Auto.Renew = as.factor(Auto.Renew),
-  # Country = as.factor(Country),
-  User.Type = as.factor(User.Type),
-  Lead.Platform = as.factor(Lead.Platform),
-  Email.Subscriber = as.factor(Email.Subscriber),
-  Push.Notifications = as.factor(Push.Notifications)
-  ) %>% select(-Purchase.Amount)
+  isDemoUser = as.factor(isDemoUser),
+  isFreeTrialUser = as.factor(isFreeTrialUser),
+  isAutoRenew = as.factor(isAutoRenew),
+  Country = as.factor(Country),
+  isUserTypeConsumer = as.factor(isUserTypeConsumer),
+  isLeadPlatformWeb = as.factor(isLeadPlatformWeb),
+  isEmailSubscriber = as.factor(isEmailSubscriber),
+  isPushNotifications = as.factor(isPushNotifications)
+  )
+# master_data<- normalize(master_data)
 
-# change "unknown" in Lead platform to NA
 ```
 
 #First attempt cluster unsupervised Hierarchical Agglomerative Clustering
@@ -189,11 +194,46 @@ ggplot(master_data, aes(x = Subscription.Event.Type, y = Purchase.Amount.in.USD)
 
 
 
+#ENet mod
+```{r}
+
+enet_mod1 <- cva.glmnet(Purchase.Amount.in.USD ~ .-isPurchaseStore,
+                       data = master_data,
+                       alpha = seq(0,1, by = 0.05))
+
+plot(enet_mod1)
+
+minlossplot(enet_mod1, 
+            cv.type = "min")
+
+```
 
 
+#ridge
+
+```{r}
+ridge_mod <- cv.glmnet(Purchase.Amount.in.USD ~ .-isPurchaseStore,
+                       data = master_data,
+                       # note alpha = 1 sets Lasso!
+                       alpha = 0)
+
+# print(lasso_mod$lambda.min)
+# print(lasso_mod$lambda.1se)
+
+# plot(lasso_mod)
 
 
+coefpath(ridge_mod)
 
+
+```
+
+```{r}
+
+coef(ridge_mod, 
+     s = ridge_mod$lambda.1se) %>% 
+  round(3)
+```
 
 
 
