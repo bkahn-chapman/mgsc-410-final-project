@@ -61,13 +61,9 @@ library('NbClust')
 
 # More libraries 
 ```{r}
-# library(hclust)
 library("dendextend")
-library("batman")
-
 
 ```
-
 
 Loading datasets
 
@@ -115,7 +111,7 @@ https://uc-r.github.io/hc_clustering
 HA cluttering code
 ```{r}
 
-HA_clust_df <- master_data %>% 
+HA_clust_df <- raw_data %>% 
   select(Language, Purchase.Amount.in.USD, Subscription.Type, Send.Count, Open.Count, Click.Count, Unique.Open.Count, Unique.Click.Count) %>% 
   mutate(
     Language = as.factor(Language),
@@ -125,7 +121,15 @@ HA_clust_df <- master_data %>%
 
 #omit NA's
 HA_clust_df <- na.omit(HA_clust_df)
-HA_clust_df <- scale(HA_clust_df)
+# HA_clust_df <- scale(HA_clust_df)
+
+```
+
+```{r}
+
+summary(raw_data)
+
+# newdata <- 
 
 ```
 
@@ -208,14 +212,41 @@ minlossplot(enet_mod1,
 
 ```
 
+```{r}
 
-#ridge
+# Use this function to find the best alpha
+get_alpha <- function(fit) {
+  alpha <- fit$alpha
+  error <- sapply(fit$modlist, 
+                  function(enet_mod1) {min(enet_mod1$cvm)})
+  alpha[which.min(error)]
+}
+
+# Get all parameters.
+get_model_params <- function(fit) {
+  alpha <- fit$alpha
+  lambdaMin <- sapply(fit$modlist, `[[`, "lambda.min")
+  lambdaSE <- sapply(fit$modlist, `[[`, "lambda.1se")
+  error <- sapply(fit$modlist, function(enet_mod1) {min(enet_mod1$cvm)})
+  best <- which.min(error)
+  data.frame(alpha = alpha[best], lambdaMin = lambdaMin[best],
+             lambdaSE = lambdaSE[best], eror = error[best])
+}
+
+# extract the best alpha value and model parameters
+best_alpha <- get_alpha(enet_mod1)
+print(best_alpha)
+get_model_params(enet_mod1)
+
+```
+
+#Almost Lasso
 
 ```{r}
-ridge_mod <- cv.glmnet(Purchase.Amount.in.USD ~ .-isPurchaseStore,
+lasso_mod <- cv.glmnet(Purchase.Amount.in.USD ~ .-isPurchaseStoreWeb,
                        data = master_data,
                        # note alpha = 1 sets Lasso!
-                       alpha = 0)
+                       alpha = 0.95)
 
 # print(lasso_mod$lambda.min)
 # print(lasso_mod$lambda.1se)
@@ -223,15 +254,15 @@ ridge_mod <- cv.glmnet(Purchase.Amount.in.USD ~ .-isPurchaseStore,
 # plot(lasso_mod)
 
 
-coefpath(ridge_mod)
+coefpath(lasso_mod)
 
 
 ```
 
 ```{r}
 
-coef(ridge_mod, 
-     s = ridge_mod$lambda.1se) %>% 
+coef(lasso_mod, 
+     s = lasso_mod$lambda.min) %>% 
   round(3)
 ```
 
