@@ -97,7 +97,8 @@ master_data <- master_data %>% mutate(
   isLeadPlatformWeb = as.factor(isLeadPlatformWeb),
   isEmailSubscriber = as.factor(isEmailSubscriber),
   isPushNotifications = as.factor(isPushNotifications)
-  )
+  ) 
+# %>% select(-Langauge)
 # master_data<- normalize(master_data)
 
 ```
@@ -111,23 +112,23 @@ https://uc-r.github.io/hc_clustering
 HA cluttering code
 ```{r}
 
-HA_clust_df <- raw_data %>% 
-  select(Language, Purchase.Amount.in.USD, Subscription.Type, Send.Count, Open.Count, Click.Count, Unique.Open.Count, Unique.Click.Count) %>% 
-  mutate(
-    Language = as.factor(Language),
-    Subscription.Type = as.factor(Subscription.Type)
-  ) %>% 
-  select(-Language, -Subscription.Type)
-
-#omit NA's
-HA_clust_df <- na.omit(HA_clust_df)
-# HA_clust_df <- scale(HA_clust_df)
+# HA_clust_df <- raw_data %>% 
+#   select(Language, Purchase.Amount.in.USD, Subscription.Type, Send.Count, Open.Count, Click.Count, Unique.Open.Count, Unique.Click.Count) %>% 
+#   mutate(
+#     Language = as.factor(Language),
+#     Subscription.Type = as.factor(Subscription.Type)
+#   ) %>% 
+#   select(-Language, -Subscription.Type)
+# 
+# #omit NA's
+# HA_clust_df <- na.omit(HA_clust_df)
+# # HA_clust_df <- scale(HA_clust_df)
 
 ```
 
 ```{r}
 
-summary(raw_data)
+# summary(raw_data)
 
 # newdata <- 
 
@@ -135,20 +136,20 @@ summary(raw_data)
 
 
 ```{r}
-# Dissimilarity Matrix
-d <- dist(HA_clust_df, method = "euclidean")
-# Hierarchical clustering using complete linkage
-hcl <- hclust(d, method = "complete")
-#PLot dendrogram
-plot(hcl, cex = 0.6, hang = -1)
+# # Dissimilarity Matrix
+# d <- dist(HA_clust_df, method = "euclidean")
+# # Hierarchical clustering using complete linkage
+# hcl <- hclust(d, method = "complete")
+# #PLot dendrogram
+# plot(hcl, cex = 0.6, hang = -1)
 
 ```
 
 ```{r}
 
-HA_clust2 <- master_data %>% 
-  select(Language, Purchase.Amount.in.USD, Subscription.Type, Send.Count, Open.Count, Click.Count, Unique.Open.Count, Unique.Click.Count) 
-  #  %>% 
+# HA_clust2 <- master_data %>% 
+#   select(Language, Purchase.Amount.in.USD, Subscription.Type, Send.Count, Open.Count, Click.Count, Unique.Open.Count, Unique.Click.Count) 
+#   #  %>% 
   # mutate(
   #   Language = as.factor(Language),
   #   Subscription.Type = as.factor(Subscription.Type)
@@ -156,19 +157,19 @@ HA_clust2 <- master_data %>%
   # select(-Language, -Subscription.Type)
 
 #omit NA's
-HA_clust2 <- na.omit(HA_clust2)
-HA_clust2 <- scale(HA_clust2)
+# HA_clust2 <- na.omit(HA_clust2)
+# HA_clust2 <- scale(HA_clust2)
 
 ```
 
 
 ```{r}
-# Dissimilarity Matrix
-d2 <- dist(HA_clust2, method = "euclidean")
-# Hierarchical clustering using complete linkage
-hcl2 <- hclust(d2, method = "complete")
-#PLot dendrogram
-plot(hcl2, cex = 0.6, hang = -1)
+# # Dissimilarity Matrix
+# d2 <- dist(HA_clust2, method = "euclidean")
+# # Hierarchical clustering using complete linkage
+# hcl2 <- hclust(d2, method = "complete")
+# #PLot dendrogram
+# plot(hcl2, cex = 0.6, hang = -1)
 
 ```
 ```{r}
@@ -190,9 +191,9 @@ ggplot(master_data, aes(x = Language))+
 
 ```{r}
 
-ggplot(master_data, aes(x = Subscription.Event.Type, y = Purchase.Amount.in.USD))+
-  facet_wrap("Country")+
-  geom_boxplot()
+# ggplot(master_data, aes(x = Subscription.Event.Type, y = Purchase.Amount.in.USD))+
+#   facet_wrap("Country")+
+#   geom_boxplot()
 
 ```
 
@@ -268,10 +269,134 @@ coef(lasso_mod,
 
 
 
+#Language
+```{r}
+
+enet_mod_lang <- cva.glmnet(Purchase.Amount.in.USD ~ Language,
+                       data = master_data,
+                       alpha = seq(0,1, by = 0.05))
+
+minlossplot(enet_mod_lang, 
+            cv.type = "min")
+
+```
+
+```{r}
+
+# Use this function to find the best alpha
+get_alpha <- function(fit) {
+  alpha <- fit$alpha
+  error <- sapply(fit$modlist, 
+                  function(enet_mod_lang) {min(enet_mod_lang$cvm)})
+  alpha[which.min(error)]
+}
+
+# extract the best alpha value and model parameters
+best_alpha <- get_alpha(enet_mod_lang)
+print(best_alpha)
+
+```
+
+
+```{r}
+mod_lang <- cv.glmnet(Purchase.Amount.in.USD ~ Language, #ask ben, using the wrong language variable?
+                       data = master_data,
+                       alpha = 0.05) #Almost Ridge
+
+coefpath(mod_lang)
+
+coef(mod_lang, 
+     s = mod_lang$lambda.min) %>% 
+  round(3)
+
+```
 
 
 
 
+#Currency
+```{r}
+
+enet_mod_currency <- cva.glmnet(Purchase.Amount.in.USD ~ Currency,
+                       data = master_data,
+                       alpha = seq(0,1, by = 0.05))
+
+minlossplot(enet_mod_currency, 
+            cv.type = "min")
+
+```
+
+```{r}
+
+# Use this function to find the best alpha
+get_alpha <- function(fit) {
+  alpha <- fit$alpha
+  error <- sapply(fit$modlist, 
+                  function(enet_mod_currency) {min(enet_mod_currency$cvm)})
+  alpha[which.min(error)]
+}
+
+# extract the best alpha value and model parameters
+best_alpha <- get_alpha(enet_mod_currency)
+print(best_alpha)
+
+```
+
+
+```{r}
+mod_currency <- cv.glmnet(Purchase.Amount.in.USD ~ Currency,
+                       data = master_data,
+                       alpha = 0) 
+
+coefpath(mod_currency)
+
+coef(mod_currency, 
+     s = mod_lang$lambda.min) %>% 
+  round(3)
+
+```
+
+#-Langauge and -Currency
+```{r}
+
+enet_mod_subset <- cva.glmnet(Purchase.Amount.in.USD ~. -Language-Currency-Langauge-isPurchaseStoreWeb,
+                       data = master_data,
+                       alpha = seq(0,1, by = 0.05))
+
+minlossplot(enet_mod_subset, 
+            cv.type = "min")
+
+```
+
+```{r}
+
+# Use this function to find the best alpha
+get_alpha <- function(fit) {
+  alpha <- fit$alpha
+  error <- sapply(fit$modlist, 
+                  function(enet_mod_subset) {min(enet_mod_subset$cvm)})
+  alpha[which.min(error)]
+}
+
+# extract the best alpha value and model parameters
+best_alpha <- get_alpha(enet_mod_subset)
+print(best_alpha)
+
+```
+
+
+```{r}
+mod_subset <- cv.glmnet(Purchase.Amount.in.USD ~ .-Language-Currency-Langauge-isPurchaseStoreWeb,
+                       data = master_data,
+                       alpha = 0.05) 
+
+coefpath(mod_subset)
+
+coef(mod_subset, 
+     s = mod_subset$lambda.min) %>% 
+  round(3)
+
+```
 
 
 
