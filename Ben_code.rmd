@@ -7,6 +7,7 @@ library(tidyverse)
 ```{r}
 
 subs <- read.csv(here::here("cleaned_data", "master_data_forR.csv"))
+narem <- read.csv(here::here("cleaned_data", "nullremovaltest.csv"))
 head(subs)
 
 ```
@@ -31,5 +32,12 @@ subs$Country <- as.factor(subs$Country)
 ##subs$Push.Notifications <- to_logical(subs$Push.Notifications, custom_true = c("Yes"), custom_false = c("No"))
 
 head(subs)
+
+```
+
+```{r}
+
+combinedlinear <- lm(Purchase.Amount.in.USD ~ .,
+           data = narem)
 
 ```
