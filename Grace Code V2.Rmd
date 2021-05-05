@@ -1,0 +1,298 @@
+---
+title: "Grace Code V2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Loading Libraries
+
+```{r}
+rm(list = ls())
+set.seed(1818)
+options(scipen = 9)
+```
+
+```{r}
+library('magrittr')
+library('dplyr')
+library('tidyr')
+library('tidyverse')
+library('ggridges')
+library('gganimate')
+library('forcats')
+library('rsample')
+library('glmnet')
+library('glmnetUtils')
+library('broom')
+library('coefplot')
+library('cluster')
+library('factoextra')
+library('NbClust')
+library("dendextend")
+
+```
+
+
+Loading datasets
+
+```{r}
+app_activity <- read.csv(here::here("cleaned_data", "app_activity.csv"))
+raw_data <- read.csv(here::here("cleaned_data", "master_data_forR_noNULL.csv"), na.strings = "NULL") #without nulls
+head(raw_data)
+```
+
+Data Manipulation
+#changed Purchase.Amount.In.USD to a numeric in excel and replaced the $- to 0
+```{r}
+
+master_data <- raw_data %>% select(-ï..ID,-Purchase.Amount,-Subscription.Event.Type,
+                                   -Subscription.Type,-Purchase.Store,-Subscription.Start.Date,
+                                   -Subscription.Expiration,-Demo.User,-Free.Trial.User,
+                                   -Free.Trial.Start.Date, -Free.Trial.Expiration,-Auto.Renew,
+                                   -User.Type,-Lead.Platform, -Email.Subscriber,-Push.Notifications)
+
+master_data <- master_data %>% mutate(
+  Purchase.Amount.in.USD = as.numeric(Purchase.Amount.in.USD),
+  isSubscriptionTypeLifetime = as.factor(isSubscriptionTypeLifetime),
+  isSubscriptionEventTypeRenewal = as.factor(isSubscriptionEventTypeRenewal),
+  isPurchaseStoreWeb = as.factor(isPurchaseStoreWeb),
+  Currency = as.factor(Currency),
+  isDemoUser = as.factor(isDemoUser),
+  isFreeTrialUser = as.factor(isFreeTrialUser),
+  isAutoRenew = as.factor(isAutoRenew),
+  Country = as.factor(Country),
+  isUserTypeConsumer = as.factor(isUserTypeConsumer),
+  isLeadPlatformWeb = as.factor(isLeadPlatformWeb),
+  isEmailSubscriber = as.factor(isEmailSubscriber),
+  isPushNotifications = as.factor(isPushNotifications)
+  ) 
+
+master_data$Language <- as.factor(master_data$Language) 
+  # subs$Country <- as.factor(subs$Country)
+##subs$User.Type <- to_logical(subs$User.T
+
+# %>% select(-Langauge)
+# master_data<- normalize(master_data)
+head(master_data)
+```
+```{r}
+summary(master_data)
+
+```
+
+#ENet mod
+```{r}
+
+enet_mod1 <- cva.glmnet(Purchase.Amount.in.USD ~ .-isPurchaseStore,
+                       data = master_data,
+                       alpha = seq(0,1, by = 0.05))
+
+plot(enet_mod1)
+
+minlossplot(enet_mod1, 
+            cv.type = "min")
+
+```
+
+```{r}
+
+# Use this function to find the best alpha
+get_alpha <- function(fit) {
+  alpha <- fit$alpha
+  error <- sapply(fit$modlist, 
+                  function(enet_mod1) {min(enet_mod1$cvm)})
+  alpha[which.min(error)]
+}
+
+# Get all parameters.
+get_model_params <- function(fit) {
+  alpha <- fit$alpha
+  lambdaMin <- sapply(fit$modlist, `[[`, "lambda.min")
+  lambdaSE <- sapply(fit$modlist, `[[`, "lambda.1se")
+  error <- sapply(fit$modlist, function(enet_mod1) {min(enet_mod1$cvm)})
+  best <- which.min(error)
+  data.frame(alpha = alpha[best], lambdaMin = lambdaMin[best],
+             lambdaSE = lambdaSE[best], eror = error[best])
+}
+
+# extract the best alpha value and model parameters
+best_alpha <- get_alpha(enet_mod1)
+print(best_alpha)
+get_model_params(enet_mod1)
+
+```
+
+#Almost Lasso
+
+```{r}
+general_mod <- cv.glmnet(Purchase.Amount.in.USD ~ .-isPurchaseStoreWeb,
+                       data = master_data,
+                       # note alpha = 1 sets Lasso!
+                       alpha = 0.85)
+# plot(lasso_mod)
+coefpath(general_mod)
+
+```
+
+```{r}
+
+coef(general_mod, 
+     s = general_mod$lambda.min) %>%
+  round(3)
+```
+
+
+```{r}
+coef(general_mod, 
+     s = general_mod$lambda.1se) %>%
+  round(3)
+
+```
+
+```{r}
+
+write.csv(Your DataFrame,"Path where you'd like to export the DataFrame\\File Name.csv", row.names = FALSE)
+
+
+```
+
+
+```{r}
+
+write.csv(Your DataFrame,"Path where you'd like to export the DataFrame\\File Name.csv", row.names = FALSE)
+
+
+```
+
+
+#Logistic Regression
+Logistic regression model
+People who renew subscriptions -> more likely to buy additional products/services
+Variables: Language, Demo User, Free Trial User, Email Subscription, Country, #Purchase Store, 
+App Session 
+Platform, Lead Platform
+
+```{r}
+library('yardstick')
+```
+
+```{r}
+
+train_prop <- 0.8
+master_split <- initial_split(master_data, prop = train_prop)
+
+master_train <- training(master_split)
+master_test <- testing(master_split)
+
+isSubscriptionEventTypeRenewal
+
+```
+
+```{r}
+logit_fit1 <- glm(isSubscriptionEventTypeRenewal ~ Language + isDemoUser + isFreeTrialUser + isEmailSubscriber + Country + App.Session...android + App.Session...ios,
+                  family = binomial,
+                  data = master_train)
+
+# rounding thing for scientific notation 
+options(scipen = 9)
+
+#exponentiation
+exp(logit_fit1$coefficients)
+
+#confusion matrix
+conf_mat(two_class_example, 
+         truth = truth, 
+         estimate = predicted)
+scores <- predict(logit_fit1,
+                  newdata = master_train)
+
+results_logit <- data.frame(
+  `truth` = as.factor(master_train$isSubscriptionEventTypeRenewal),
+  `Class1` =  scores,
+  `Class2` = 1 - scores,
+  `predicted` = as.factor(ifelse(scores > 0.4,
+                                 "Yes","No"))
+)
+
+
+```
+
+```{r}
+cm <- conf_mat(results_logit, 
+               truth = truth,
+               estimate = predicted)
+
+print(cm)
+autoplot(cm, "heatmap")
+
+```
+
+```{r}
+# ROC Plots
+library('plotROC')
+
+p <- ggplot(results_logit, 
+            aes(m = Class1, d = truth)) + 
+  geom_roc(labelsize = 3.5, 
+           cutoffs.at = 
+             c(0.99,0.9,0.7,0.5,0.3,0.1,0)) +
+  theme_minimal(base_size = 16)
+print(p)
+calc_auc(p)
+
+roc_auc(results_logit, 
+        truth = truth, 
+        estimate = predicted)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

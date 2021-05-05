@@ -69,7 +69,7 @@ Loading datasets
 
 ```{r}
 app_activity <- read.csv(here::here("cleaned_data", "app_activity.csv"))
-raw_data <- read.csv(here::here("cleaned_data", "master_data_forR.csv"), na.strings = "NULL")
+raw_data <- read.csv(here::here("cleaned_data", "master_data_forR.csv"), na.strings = "NULL") #with nulls
 ```
 
 Data Manipulation
@@ -247,7 +247,7 @@ get_model_params(enet_mod1)
 lasso_mod <- cv.glmnet(Purchase.Amount.in.USD ~ .-isPurchaseStoreWeb,
                        data = master_data,
                        # note alpha = 1 sets Lasso!
-                       alpha = 0.95)
+                       alpha = 0.25)
 
 # print(lasso_mod$lambda.min)
 # print(lasso_mod$lambda.1se)
