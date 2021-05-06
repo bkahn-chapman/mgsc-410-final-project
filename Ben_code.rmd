@@ -8,6 +8,10 @@ library(tidyverse)
 
 subs <- read.csv(here::here("cleaned_data", "master_data_forR.csv"))
 narem <- read.csv(here::here("cleaned_data", "nullremovaltest.csv"))
+avgs <- read.csv(here::here("cleaned_data", "master_data_forR_avgNULL.csv"), na.strings = "NULL")
+large <- read.csv(here::here("cleaned_data", "master_data_forR_bigvals.csv"))
+small <- read.csv(here::here("cleaned_data", "master_data_forR_smallvals.csv"))
+
 head(subs)
 
 ```
@@ -17,15 +21,21 @@ head(subs)
 library(batman)
 
 subs$Language <- as.factor(subs$Language)
+narem$Language <- as.factor(narem$Language)
+avgs$Language <- as.factor(avgs$Language)
 ##subs$Subscription.Type <- to_logical(subs$Subscription.Type, custom_true = c("Lifetime"), custom_false = c("Limited"))
 ##subs$Subscription.Type <- as.logical(subs$Subscription.Type)
 ##subs$Subscription.Event.Type <- to_logical(subs$Subscription.Event.Type, custom_true = c("INITIAL_PURCHASE"), custom_false = c("RENEWAL"))
 ##subs$Purchase.Store <- to_logical(subs$Purchase.Store, custom_true = c("App"), custom_false = c("Web"))
 subs$Currency <- as.factor(subs$Currency)
+narem$Currency <- as.factor(narem$Currency)
+avgs$Currency <- as.factor(avgs$Currency)
 ##subs$Demo.User <- to_logical(subs$Demo.User, custom_true = c("Yes"), custom_false = c("No"))
 ##subs$Free.Trial.User <- to_logical(subs$Free.Trial.User, custom_true = c("Yes"), custom_false = c("No"))
 ##subs$Auto.Renew <- to_logical(subs$Auto.Renew, custom_true = c("On"), custom_false = c("Off"))
 subs$Country <- as.factor(subs$Country)
+narem$Country <- as.factor(narem$Country)
+avgs$Country <- as.factor(avgs$Country)
 ##subs$User.Type <- to_logical(subs$User.Type, custom_true = c("Consumer"), custom_false = c("Other"))
 ##might change Lead Platform to logical once 'Other' becomes 'NA'
 ##subs$Email.Subscriber <- to_logical(subs$Email.Subscriber, custom_true = c("Yes"), custom_false = c("No"))
@@ -37,7 +47,155 @@ head(subs)
 
 ```{r}
 
+master_dataL <- large %>% select(-ï..ID,-Purchase.Amount,-Subscription.Event.Type,
+                                   -Subscription.Type,-Purchase.Store,-Subscription.Start.Date,
+                                   -Subscription.Expiration,-Demo.User,-Free.Trial.User,
+                                   -Free.Trial.Start.Date, -Free.Trial.Expiration,-Auto.Renew,
+                                   -User.Type,-Lead.Platform, -Email.Subscriber,-Push.Notifications)
+
+master_dataL <- master_dataL %>% mutate(
+  Purchase.Amount.in.USD = as.numeric(Purchase.Amount.in.USD),
+  isSubscriptionTypeLifetime = as.factor(isSubscriptionTypeLifetime),
+  isSubscriptionEventTypeRenewal = as.factor(isSubscriptionEventTypeRenewal),
+  isPurchaseStoreWeb = as.factor(isPurchaseStoreWeb),
+  Currency = as.factor(Currency),
+  isDemoUser = as.factor(isDemoUser),
+  isFreeTrialUser = as.factor(isFreeTrialUser),
+  isAutoRenew = as.factor(isAutoRenew),
+  Country = as.factor(Country),
+  isUserTypeConsumer = as.factor(isUserTypeConsumer),
+  isLeadPlatformWeb = as.factor(isLeadPlatformWeb),
+  isEmailSubscriber = as.factor(isEmailSubscriber),
+  isPushNotifications = as.factor(isPushNotifications)
+  ) 
+
+master_dataL$Language <- as.factor(master_dataL$Language) 
+  # subs$Country <- as.factor(subs$Country)
+##subs$User.Type <- to_logical(subs$User.T
+
+# %>% select(-Langauge)
+# master_data<- normalize(master_data)
+head(master_dataL)
+
+```
+
+```{r}
+
+master_dataS <- small %>% select(-ï..ID,-Purchase.Amount,-Subscription.Event.Type,
+                                   -Subscription.Type,-Purchase.Store,-Subscription.Start.Date,
+                                   -Subscription.Expiration,-Demo.User,-Free.Trial.User,
+                                   -Free.Trial.Start.Date, -Free.Trial.Expiration,-Auto.Renew,
+                                   -User.Type,-Lead.Platform, -Email.Subscriber,-Push.Notifications)
+
+master_dataS <- master_dataS %>% mutate(
+  Purchase.Amount.in.USD = as.numeric(Purchase.Amount.in.USD),
+  isSubscriptionTypeLifetime = as.factor(isSubscriptionTypeLifetime),
+  isSubscriptionEventTypeRenewal = as.factor(isSubscriptionEventTypeRenewal),
+  isPurchaseStoreWeb = as.factor(isPurchaseStoreWeb),
+  Currency = as.factor(Currency),
+  isDemoUser = as.factor(isDemoUser),
+  isFreeTrialUser = as.factor(isFreeTrialUser),
+  isAutoRenew = as.factor(isAutoRenew),
+  Country = as.factor(Country),
+  isUserTypeConsumer = as.factor(isUserTypeConsumer),
+  isLeadPlatformWeb = as.factor(isLeadPlatformWeb),
+  isEmailSubscriber = as.factor(isEmailSubscriber),
+  isPushNotifications = as.factor(isPushNotifications)
+  ) 
+
+master_dataS$Language <- as.factor(master_dataS$Language) 
+  # subs$Country <- as.factor(subs$Country)
+##subs$User.Type <- to_logical(subs$User.T
+
+# %>% select(-Langauge)
+# master_data<- normalize(master_data)
+head(master_dataS)
+
+```
+
+```{r}
+
 combinedlinear <- lm(Purchase.Amount.in.USD ~ .,
-           data = narem)
+           data = avgs)
+
+summary(combinedlinear)
+
+```
+
+```{r}
+
+library('factoextra')
+library('cluster')
+
+
+# determine number of clusters using elbow method
+fviz_nbclust(master_data, 
+             kmeans, 
+             method = "wss") +
+  geom_vline(xintercept = 4, 
+             linetype = 2)+
+  labs(subtitle = "Elbow method")
+
+```
+
+```{r}
+
+fviz_nbclust(avgs, 
+             kmeans, 
+             nstart = 25,  
+             method = "gap_stat", 
+             nboot = 500) +
+ labs(subtitle = 
+        "Gap statistic method")
+
+```
+
+```{r}
+
+master_dataL <- master_dataL %>% drop_na()  %>% select(-Currency)
+
+train_prop <- 0.8
+master_splitL <- initial_split(master_dataL, prop = train_prop)
+master_trainL <- training(master_splitL)
+master_testL <- testing(master_splitL)
+
+master_dataS <- master_dataS %>% drop_na()  %>% select(-Currency)
+
+train_prop <- 0.8
+master_splitS <- initial_split(master_dataS, prop = train_prop)
+master_trainS <- training(master_splitS)
+master_testS <- testing(master_splitS)
+
+```
+
+```{r}
+
+linear_modL <- lm(App.Session.Sum ~ .,
+                 data = master_trainL)
+
+# predictions
+preds_linear_trainL <- predict(linear_modL, newdata = master_trainL)
+preds_linear_testL <- predict(linear_modL, newdata = master_testL)
+
+resids_trainL <- linear_modL$residuals
+resids_testL <- master_testL$App.Session.Sum - preds_linear_testL
+
+results_trainL <- data.frame(
+  preds = preds_linear_trainL,
+  true = master_trainL$App.Session.Sum, 
+  resids = resids_trainL
+)
+
+results_testL <- data.frame(
+  preds = preds_linear_testL,
+  true = master_testL$App.Session.Sum, 
+  resids = resids_testL
+)
+
+ggplot(results_trainL, 
+       aes(x = true, y = preds)) +
+  geom_point(alpha = 1/2, size = 4) +
+  geom_abline(color = "red") +
+  xlim(10,40) + ylim(10,40)
 
 ```
