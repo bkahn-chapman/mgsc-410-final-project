@@ -43,7 +43,7 @@ Loading datasets
 
 ```{r}
 app_activity <- read.csv(here::here("cleaned_data", "app_activity.csv"))
-raw_data <- read.csv(here::here("cleaned_data", "master_data_forR_noNULL.csv"), na.strings = "NULL")
+raw_data <- read.csv(here::here("cleaned_data", "master_data_forR_avgNULL.csv"), na.strings = "NULL")
 
 raw_data_null <- read.csv(here::here("cleaned_data", "master_data_forR.csv"), na.strings = "NULL")
 
