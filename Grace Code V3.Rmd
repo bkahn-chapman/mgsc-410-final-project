@@ -1,0 +1,230 @@
+---
+title: "Grace Code V3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Loading Libraries
+
+```{r}
+rm(list = ls())
+set.seed(1818)
+options(scipen = 9)
+```
+
+```{r}
+library('magrittr')
+library('dplyr')
+library('tidyr')
+library('tidyverse')
+library('ggridges')
+library('gganimate')
+library('forcats')
+library('rsample')
+library('glmnet')
+library('glmnetUtils')
+library('broom')
+library('coefplot')
+library('cluster')
+library('factoextra')
+library('NbClust')
+library("dendextend")
+# library('yardstick')
+
+
+```
+
+
+Loading datasets
+
+```{r}
+app_activity <- read.csv(here::here("cleaned_data", "app_activity.csv"))
+raw_data <- read.csv(here::here("cleaned_data", "master_data_forR_noNULL.csv"), na.strings = "NULL")
+
+raw_data_null <- read.csv(here::here("cleaned_data", "master_data_forR.csv"), na.strings = "NULL")
+
+
+#without nulls
+head(raw_data)
+```
+
+Data Manipulation
+#changed Purchase.Amount.In.USD to a numeric in excel and replaced the $- to 0
+```{r}
+
+master_data <- raw_data %>% select(-ï..ID,-Purchase.Amount,-Subscription.Event.Type,
+                                   -Subscription.Type,-Purchase.Store,-Subscription.Start.Date,
+                                   -Subscription.Expiration,-Demo.User,-Free.Trial.User,
+                                   -Free.Trial.Start.Date, -Free.Trial.Expiration,-Auto.Renew,
+                                   -User.Type,-Lead.Platform, -Email.Subscriber,-Push.Notifications)
+
+master_data <- master_data %>% mutate(
+  Purchase.Amount.in.USD = as.numeric(Purchase.Amount.in.USD),
+  isSubscriptionTypeLifetime = as.factor(isSubscriptionTypeLifetime),
+  isSubscriptionEventTypeRenewal = as.factor(isSubscriptionEventTypeRenewal),
+  isPurchaseStoreWeb = as.factor(isPurchaseStoreWeb),
+  Currency = as.factor(Currency),
+  isDemoUser = as.factor(isDemoUser),
+  isFreeTrialUser = as.factor(isFreeTrialUser),
+  isAutoRenew = as.factor(isAutoRenew),
+  Country = as.factor(Country),
+  isUserTypeConsumer = as.factor(isUserTypeConsumer),
+  isLeadPlatformWeb = as.factor(isLeadPlatformWeb),
+  isEmailSubscriber = as.factor(isEmailSubscriber),
+  isPushNotifications = as.factor(isPushNotifications)
+  ) 
+
+master_data$Language <- as.factor(master_data$Language) 
+  # subs$Country <- as.factor(subs$Country)
+##subs$User.Type <- to_logical(subs$User.T
+
+# %>% select(-Langauge)
+# master_data<- normalize(master_data)
+head(master_data)
+```
+
+```{r}
+
+master_data_null <- raw_data_null %>% select(-ï..ID,-Purchase.Amount,-Subscription.Event.Type,
+                                   -Subscription.Type,-Purchase.Store,-Subscription.Start.Date,
+                                   -Subscription.Expiration,-Demo.User,-Free.Trial.User,
+                                   -Free.Trial.Start.Date, -Free.Trial.Expiration,-Auto.Renew,
+                                   -User.Type,-Lead.Platform, -Email.Subscriber,-Push.Notifications)
+
+master_data_null <- master_data_null %>% mutate(
+  Purchase.Amount.in.USD = as.numeric(Purchase.Amount.in.USD),
+  isSubscriptionTypeLifetime = as.factor(isSubscriptionTypeLifetime),
+  isSubscriptionEventTypeRenewal = as.factor(isSubscriptionEventTypeRenewal),
+  isPurchaseStoreWeb = as.factor(isPurchaseStoreWeb),
+  Currency = as.factor(Currency),
+  isDemoUser = as.factor(isDemoUser),
+  isFreeTrialUser = as.factor(isFreeTrialUser),
+  isAutoRenew = as.factor(isAutoRenew),
+  Country = as.factor(Country),
+  isUserTypeConsumer = as.factor(isUserTypeConsumer),
+  isLeadPlatformWeb = as.factor(isLeadPlatformWeb),
+  isEmailSubscriber = as.factor(isEmailSubscriber),
+  isPushNotifications = as.factor(isPushNotifications)
+  ) 
+
+master_data_null$Language <- as.factor(master_data_null$Language) 
+  # subs$Country <- as.factor(subs$Country)
+##subs$User.Type <- to_logical(subs$User.T
+
+# %>% select(-Langauge)
+# master_data<- normalize(master_data)
+head(master_data_null)
+```
+
+```{r}
+
+master_data <- master_data %>% drop_na()  %>% select(-Currency)
+
+train_prop <- 0.8
+master_split <- initial_split(master_data, prop = train_prop)
+master_train <- training(master_split)
+master_test <- testing(master_split)
+```
+
+
+# Linear model to predict frequency of app use
+
+```{r}
+# logit_fit1 <- glm(isSubscriptionEventTypeRenewal ~ isSubscriptionType + Language + isDemoUser + isFreeTrialUser + isEmailSubscriber + Country + App.Session...android + App.Session...ios,
+#                   family = binomial,
+#                   data = master_train)
+# 
+# #exponentiation
+# exp(logit_fit1$coefficients)
+# 
+# preds_train <- predict(logit_fit1, newdata = master_train)
+# preds_test <- predict(logit_fit1, newdata = master_test)
+# 
+# 
+# results_train <- data.frame(
+#   `truth` = as.factor(master_train$isSubscriptionEventTypeRenewal),
+#   `Class1` =  preds_train,
+#   `Class2` = 1 - preds_train,
+#   `predicted` = as.factor(ifelse(preds_train > 0.4,
+#                                  "TRUE","FALSE")))
+# 
+# results_test <- data.frame(
+#   `truth` = as.factor(master_test$isSubscriptionEventTypeRenewal),
+#   `Class1` =  preds_test,
+#   `Class2` = 1 - preds_test,
+#   `predicted` = as.factor(ifelse(preds_test > 0.4,
+#                                  "TRUE","FALSE")))
+```
+
+
+```{r}
+linear_mod <- lm(App.Session.Sum ~ .,
+                 data = master_train)
+
+# predictions
+preds_linear_train <- predict(linear_mod, newdata = master_train)
+preds_linear_test <- predict(linear_mod, newdata = master_test)
+
+resids_train <- linear_mod$residuals
+resids_test <- master_test$App.Session.Sum - preds_linear_test
+
+results_train <- data.frame(
+  preds = preds_linear_train,
+  true = master_train$App.Session.Sum, 
+  resids = resids_train
+)
+
+results_test <- data.frame(
+  preds = preds_linear_test,
+  true = master_test$App.Session.Sum, 
+  resids = resids_test
+)
+```
+
+```{r}
+ggplot(results_train, 
+       aes(x = true, y = preds)) +
+  geom_point(alpha = 1/2, size = 4) +
+  geom_abline(color = "red") +
+  xlim(10,40) + ylim(10,40)
+
+```
+
+
+```{r}
+ggplot(results_test, 
+       aes(x = true, y = preds)) +
+  geom_point(alpha = 1/2, size = 4) +
+  geom_abline(color = "red") +
+  xlim(10,40) + ylim(10,40)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

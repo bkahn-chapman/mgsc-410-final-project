@@ -33,6 +33,7 @@ library('cluster')
 library('factoextra')
 library('NbClust')
 library("dendextend")
+library('yardstick')
 
 ```
 
@@ -41,9 +42,17 @@ Loading datasets
 
 ```{r}
 app_activity <- read.csv(here::here("cleaned_data", "app_activity.csv"))
-raw_data <- read.csv(here::here("cleaned_data", "master_data_forR_noNULL.csv"), na.strings = "NULL") #without nulls
+raw_data <- read.csv(here::here("cleaned_data", "master_data_forR_noNULL.csv"), na.strings = "NULL")
+
+raw_data_null <- read.csv(here::here("cleaned_data", "master_data_forR.csv"), na.strings = "NULL")
+
+
+#without nulls
 head(raw_data)
 ```
+
+
+
 
 Data Manipulation
 #changed Purchase.Amount.In.USD to a numeric in excel and replaced the $- to 0
@@ -80,8 +89,41 @@ master_data$Language <- as.factor(master_data$Language)
 head(master_data)
 ```
 ```{r}
-summary(master_data)
 
+master_data_null <- raw_data_null %>% select(-ï..ID,-Purchase.Amount,-Subscription.Event.Type,
+                                   -Subscription.Type,-Purchase.Store,-Subscription.Start.Date,
+                                   -Subscription.Expiration,-Demo.User,-Free.Trial.User,
+                                   -Free.Trial.Start.Date, -Free.Trial.Expiration,-Auto.Renew,
+                                   -User.Type,-Lead.Platform, -Email.Subscriber,-Push.Notifications)
+
+master_data_null <- master_data_null %>% mutate(
+  Purchase.Amount.in.USD = as.numeric(Purchase.Amount.in.USD),
+  isSubscriptionTypeLifetime = as.factor(isSubscriptionTypeLifetime),
+  isSubscriptionEventTypeRenewal = as.factor(isSubscriptionEventTypeRenewal),
+  isPurchaseStoreWeb = as.factor(isPurchaseStoreWeb),
+  Currency = as.factor(Currency),
+  isDemoUser = as.factor(isDemoUser),
+  isFreeTrialUser = as.factor(isFreeTrialUser),
+  isAutoRenew = as.factor(isAutoRenew),
+  Country = as.factor(Country),
+  isUserTypeConsumer = as.factor(isUserTypeConsumer),
+  isLeadPlatformWeb = as.factor(isLeadPlatformWeb),
+  isEmailSubscriber = as.factor(isEmailSubscriber),
+  isPushNotifications = as.factor(isPushNotifications)
+  ) 
+
+master_data_null$Language <- as.factor(master_data_null$Language) 
+  # subs$Country <- as.factor(subs$Country)
+##subs$User.Type <- to_logical(subs$User.T
+
+# %>% select(-Langauge)
+# master_data<- normalize(master_data)
+head(master_data_null)
+```
+
+```{r}
+summary(master_data)
+master_data %>% glimpse()
 ```
 
 #ENet mod
@@ -132,7 +174,8 @@ get_model_params(enet_mod1)
 general_mod <- cv.glmnet(Purchase.Amount.in.USD ~ .-isPurchaseStoreWeb,
                        data = master_data,
                        # note alpha = 1 sets Lasso!
-                       alpha = 0.85)
+                       # alpha = 0.85) #try this with a alpha of 1!
+                       alpha = 1)
 # plot(lasso_mod)
 coefpath(general_mod)
 
@@ -153,21 +196,6 @@ coef(general_mod,
 
 ```
 
-```{r}
-
-write.csv(Your DataFrame,"Path where you'd like to export the DataFrame\\File Name.csv", row.names = FALSE)
-
-
-```
-
-
-```{r}
-
-write.csv(Your DataFrame,"Path where you'd like to export the DataFrame\\File Name.csv", row.names = FALSE)
-
-
-```
-
 
 #Logistic Regression
 Logistic regression model
@@ -176,53 +204,44 @@ Variables: Language, Demo User, Free Trial User, Email Subscription, Country, #P
 App Session 
 Platform, Lead Platform
 
-```{r}
-library('yardstick')
-```
 
 ```{r}
-
 train_prop <- 0.8
-master_split <- initial_split(master_data, prop = train_prop)
-
+master_split <- initial_split(master_data_null, prop = train_prop)
 master_train <- training(master_split)
 master_test <- testing(master_split)
-
-isSubscriptionEventTypeRenewal
-
 ```
 
 ```{r}
-logit_fit1 <- glm(isSubscriptionEventTypeRenewal ~ Language + isDemoUser + isFreeTrialUser + isEmailSubscriber + Country + App.Session...android + App.Session...ios,
+logit_fit1 <- glm(isSubscriptionEventTypeRenewal ~  isDemoUser + isFreeTrialUser + isEmailSubscriber + Country + App.Session...android + App.Session...ios,
                   family = binomial,
                   data = master_train)
-
-# rounding thing for scientific notation 
-options(scipen = 9)
 
 #exponentiation
 exp(logit_fit1$coefficients)
 
-#confusion matrix
-conf_mat(two_class_example, 
-         truth = truth, 
-         estimate = predicted)
-scores <- predict(logit_fit1,
-                  newdata = master_train)
+preds_train <- predict(logit_fit1, newdata = master_train)
+preds_test <- predict(logit_fit1, newdata = master_test)
 
-results_logit <- data.frame(
+
+results_train <- data.frame(
   `truth` = as.factor(master_train$isSubscriptionEventTypeRenewal),
-  `Class1` =  scores,
-  `Class2` = 1 - scores,
-  `predicted` = as.factor(ifelse(scores > 0.4,
-                                 "Yes","No"))
-)
+  `Class1` =  preds_train,
+  `Class2` = 1 - preds_train,
+  `predicted` = as.factor(ifelse(preds_train > 0.4,
+                                 "TRUE","FALSE")))
 
+results_test <- data.frame(
+  `truth` = as.factor(master_test$isSubscriptionEventTypeRenewal),
+  `Class1` =  preds_test,
+  `Class2` = 1 - preds_test,
+  `predicted` = as.factor(ifelse(preds_test > 0.4,
+                                 "TRUE","FALSE")))
 
 ```
 
 ```{r}
-cm <- conf_mat(results_logit, 
+cm <- conf_mat(results_train, 
                truth = truth,
                estimate = predicted)
 
@@ -231,11 +250,24 @@ autoplot(cm, "heatmap")
 
 ```
 
+
+```{r}
+cm <- conf_mat(results_test, 
+               truth = truth,
+               estimate = predicted)
+
+print(cm)
+autoplot(cm, "heatmap")
+
+```
+
+
+
 ```{r}
 # ROC Plots
 library('plotROC')
 
-p <- ggplot(results_logit, 
+p <- ggplot(results_train, 
             aes(m = Class1, d = truth)) + 
   geom_roc(labelsize = 3.5, 
            cutoffs.at = 
@@ -244,30 +276,24 @@ p <- ggplot(results_logit,
 print(p)
 calc_auc(p)
 
-roc_auc(results_logit, 
-        truth = truth, 
-        estimate = predicted)
+# roc_auc(results_train, 
+#         truth = truth, 
+#         estimate = predicted)
 
 ```
 
 
+```{r}
+
+accuracy(results_train, predicted, truth)
+accuracy(results_test, predicted, truth)
+```
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```{r}
+metrics(results_train,predicted, truth)
+metrics(results_test,predicted,truth)
+```
 
 
 
