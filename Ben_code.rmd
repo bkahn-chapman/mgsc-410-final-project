@@ -7,12 +7,12 @@ library(tidyverse)
 ```{r}
 
 subs <- read.csv(here::here("cleaned_data", "master_data_forR.csv"))
-narem <- read.csv(here::here("cleaned_data", "nullremovaltest.csv"))
+narem <- read.csv(here::here("cleaned_data", "master_data_forR_noNUll.csv"))
 avgs <- read.csv(here::here("cleaned_data", "master_data_forR_avgNULL.csv"), na.strings = "NULL")
 large <- read.csv(here::here("cleaned_data", "master_data_forR_bigvals.csv"))
 small <- read.csv(here::here("cleaned_data", "master_data_forR_smallvals.csv"))
 
-head(subs)
+head(narem)
 
 ```
 
@@ -38,8 +38,9 @@ narem$Country <- as.factor(narem$Country)
 avgs$Country <- as.factor(avgs$Country)
 ##subs$User.Type <- to_logical(subs$User.Type, custom_true = c("Consumer"), custom_false = c("Other"))
 ##might change Lead Platform to logical once 'Other' becomes 'NA'
-##subs$Email.Subscriber <- to_logical(subs$Email.Subscriber, custom_true = c("Yes"), custom_false = c("No"))
-##subs$Push.Notifications <- to_logical(subs$Push.Notifications, custom_true = c("Yes"), custom_false = c("No"))
+subs$Email.Subscriber <- to_logical(subs$Email.Subscriber, custom_true = c("Yes"), custom_false = c("No"))
+subs$Push.Notifications <- to_logical(subs$Push.Notifications, custom_true = c("Yes"), custom_false = c("No"))
+
 
 head(subs)
 
@@ -124,29 +125,70 @@ summary(combinedlinear)
 
 ```{r}
 
+if(.Platform$OS.type == "windows") withAutoprint({
+memory.size()
+memory.size(TRUE)
+memory.limit()
+})
+memory.limit(size=100000)
+
 library('factoextra')
 library('cluster')
 
+avgclean <- avgs %>% select(-Purchase.Amount, -Currency, -Free.Trial.Start.Date, -Free.Trial.Expiration, -Open.Count, -Send.Count, -Click.Count, -Unique.Open.Count, -Unique.Click.Count, -Subscription.Start.Date, -Subscription.Expiration, -Demo.User, -Free.Trial.User, -Auto.Renew, -User.Type, -Lead.Platform, -Email.Subscriber, -Push.Notifications, -isLeadPlatformWeb, -isEmailSubscriber, -isPushNotifications, -isUserTypeConsumer, -isAutoRenew, -isFreeTrialUser, -isDemoUser, -isPurchaseStoreWeb, -isSubscriptionEventTypeRenewal, -isSubscriptionTypeLifetime, -Language, -Subscription.Type, -Subscription.Event.Type, -Purchase.Store, -Country)
+
+purchases <- narem %>% select(Purchase.Amount.in.USD)
+
+head(purchases)
 
 # determine number of clusters using elbow method
-fviz_nbclust(master_data, 
+fviz_nbclust(purchases, 
              kmeans, 
              method = "wss") +
   geom_vline(xintercept = 4, 
              linetype = 2)+
   labs(subtitle = "Elbow method")
 
+## WHERE IS THE NA HERE
+
 ```
 
 ```{r}
 
-fviz_nbclust(avgs, 
-             kmeans, 
-             nstart = 25,  
-             method = "gap_stat", 
-             nboot = 500) +
- labs(subtitle = 
-        "Gap statistic method")
+pca_out <- prcomp(avgclean, 
+                  scale = TRUE)
+
+pca_out
+
+screeplot(pca_out, 
+          type = "lines")
+
+library('ggfortify')
+
+autoplot(prcomp(avgclean), 
+         data = avgclean, 
+         loadings = TRUE, 
+         loadings.colour = 'blue',
+         loadings.label = TRUE, 
+         loadings.label.size = 5, 
+         label = TRUE) + 
+  theme_bw() 
+
+```
+
+```{r}
+
+kmeans <- kmeans(purchases, 
+                  centers = 4, 
+                  nstart = 25)
+
+kmeans$centers
+
+clusplot(purchases, 
+         kmeans$cluster, 
+         color=TRUE, 
+         shade=FALSE,
+         labels=5, lines=2)
 
 ```
 
