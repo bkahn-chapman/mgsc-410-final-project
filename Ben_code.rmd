@@ -137,7 +137,7 @@ library('cluster')
 
 avgclean <- avgs %>% select(-Purchase.Amount, -Currency, -Free.Trial.Start.Date, -Free.Trial.Expiration, -Open.Count, -Send.Count, -Click.Count, -Unique.Open.Count, -Unique.Click.Count, -Subscription.Start.Date, -Subscription.Expiration, -Demo.User, -Free.Trial.User, -Auto.Renew, -User.Type, -Lead.Platform, -Email.Subscriber, -Push.Notifications, -isLeadPlatformWeb, -isEmailSubscriber, -isPushNotifications, -isUserTypeConsumer, -isAutoRenew, -isFreeTrialUser, -isDemoUser, -isPurchaseStoreWeb, -isSubscriptionEventTypeRenewal, -isSubscriptionTypeLifetime, -Language, -Subscription.Type, -Subscription.Event.Type, -Purchase.Store, -Country)
 
-purchases <- narem %>% select(Purchase.Amount.in.USD)
+purchases <- narem %>% select(Purchase.Amount.in.USD, App.Session...android, App.Session...ios, App.Session...NULL, App.Session...web, App.Session.Sum, App.Activity...App.Launch, App.Activity...Onboarding, App.Activity...Completed, App.Activity...NULL, App.Activity...Other, App.Activity...Start)
 
 head(purchases)
 
